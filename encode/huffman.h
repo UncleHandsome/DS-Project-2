@@ -30,6 +30,5 @@ static inline void hm_init_node(struct hm_node *hm)
     hm->frequency = 0;
     hm->left = hm->right = NULL;
 }
-extern void create_hm_tree(const char *, struct hm_root *);
-extern void generate_code_table(struct hm_root *);
+extern void create_hm_tree(const char *);
 extern void encode(const char *, const char *);

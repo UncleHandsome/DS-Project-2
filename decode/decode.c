@@ -10,7 +10,7 @@ typedef struct TrieNode {
     struct TrieNode *child[2];
     int end;
 } node_t;
-node_t *trie_table, prev;
+node_t *trie_table, *prev;
 int trie_index, pos, limit;
 void trie_init()
 {
@@ -96,6 +96,9 @@ void decode(const char *filename, const char *output)
         while ((ori = lookup(out, root)) != -1) 
             fputc(ori, fo);
     }
+    free(trie_table);
+    fclose(fp);
+    fclose(fo);
 }
 int main(int argc, char *argv[])
 {

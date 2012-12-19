@@ -1,8 +1,8 @@
-#include <linux/kernel.h>
-#include <linux/stddef.h>
+#include <stdio.h>
 #ifndef __rb_tree__
 #define __rb_tree__
 
+/* can not use this two marcos in user-space */
 #define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
 #define container_of(ptr, type, member) ({            \
                 const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
@@ -55,7 +55,7 @@ static inline void rb_init_node(struct rb_node *rb)
 extern void rb_insert_color(struct rb_node *, struct rb_root *);
 extern void rb_erase(struct rb_node *, struct rb_root *);
 
-static inline void rb_link_node(struct rb_node *node, struct rb_node *parent,
+extern inline void rb_link_node(struct rb_node *node, struct rb_node *parent,
                 struct rb_node **rb_link)
 {
     node->rb_parent_color = (unsigned long) parent;

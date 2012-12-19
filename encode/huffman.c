@@ -8,7 +8,6 @@
 #include <unistd.h>
 static unsigned char char_table[260][32], save[32];
 static int sz[260];
-static struct hm_node *node_table;
 static unsigned long long int record[260] = {};
 
 static void huffman_insert(struct hm_root *hm_root, struct hm_node *data)
@@ -44,53 +43,11 @@ static inline struct hm_node *huffman_top(struct hm_root *hm_root)
 {
     return rb_entry(hm_root->left_most, struct hm_node, node);
 }
-extern void create_hm_tree(const char *input, struct hm_root *hm_root)
-{
-    int fd, i;
-    if ((fd = open(input, O_RDONLY)) == -1) {
-        fprintf(stderr, "Cannot open %s. Try again later.\n", input);
-        exit(1);
-    }
-    unsigned char buf[BUFFERSIZE];
-    int nbytes = sizeof(buf);
-    int bytes_read;
-
-    int index = 0;
-    node_table = (struct hm_node *) malloc(NODESIZE * sizeof (struct hm_node));
-
-    memset(record, 0, sizeof(record));
-    while ((bytes_read = read(fd, buf, nbytes)) > 0) 
-        for (i = 0; i < bytes_read; i++)
-            ++record[(int) buf[i]];
-    
-    for (i = 0; i < 256; i++) {
-        struct hm_node *node = node_table + index++;
-        if (record[i] == 0)
-            continue;
-        hm_init_node(node);
-        node->frequency = record[i];
-        huffman_insert(hm_root, node); 
-    }
-    while (hm_root->rank.rb_node->rb_left != NULL || hm_root->rank.rb_node->rb_right != NULL) {
-
-        struct hm_node *first = huffman_top(hm_root);
-        huffman_pop(hm_root);
-        struct hm_node *second = huffman_top(hm_root);
-        huffman_pop(hm_root);
-
-        struct hm_node *new = node_table + index++;
-        hm_init_node(new);
-        new->frequency = first->frequency + second->frequency;
-        new->left = first;
-        new->right = second;
-        huffman_insert(hm_root, new);
-    }
-    close(fd);
-}
+static struct hm_node *base;
 static void traverse(struct hm_node *node, int level)
 {
     if (node->left == NULL && node->right == NULL) {
-        int off = node - node_table, i;
+        int off = node - base, i;
         sz[off] = level;
         save[level++] = '\0';
         for (i = 0; i < level; i++)
@@ -106,11 +63,59 @@ static void traverse(struct hm_node *node, int level)
         traverse(node->right, level + 1);
     }
 }
-inline void generate_code_table(struct hm_root *root)
+extern void create_hm_tree(const char *input)
 {
-    /* there is only "one" node in the Red-Black Tree */
-    struct hm_node *node = huffman_top(root);
+    /* variable initialize */
+    unsigned char buf[BUFFERSIZE];
+    int nbytes = sizeof(buf),  bytes_read, index = 0, fd, i;
+    struct hm_root *hm_root = &HM_ROOT;
+    struct hm_node *node_table, *node;
+    node_table = (struct hm_node *) malloc(NODESIZE * sizeof (struct hm_node));
+    memset(record, 0, sizeof(record));
+
+    /* open the file */
+    if ((fd = open(input, O_RDONLY)) == -1) {
+        fprintf(stderr, "Cannot open %s. Try again later.\n", input);
+        exit(1);
+    }
+
+    /* count the frequency */
+    while ((bytes_read = read(fd, buf, nbytes)) > 0) 
+        for (i = 0; i < bytes_read; i++)
+            ++record[(int) buf[i]];
+    
+    /* tree initialize */
+    for (i = 0; i < 256; i++) {
+        node = node_table + index++;
+        if (record[i] == 0)
+            continue;
+        hm_init_node(node);
+        node->frequency = record[i];
+        huffman_insert(hm_root, node); 
+    }
+    /* build the tree */
+    while (hm_root->rank.rb_node->rb_left != NULL || hm_root->rank.rb_node->rb_right != NULL) {
+
+        struct hm_node *first = huffman_top(hm_root);
+        huffman_pop(hm_root);
+        struct hm_node *second = huffman_top(hm_root);
+        huffman_pop(hm_root);
+
+        struct hm_node *new = node_table + index++;
+        hm_init_node(new);
+        new->frequency = first->frequency + second->frequency;
+        new->left = first;
+        new->right = second;
+        huffman_insert(hm_root, new);
+    }
+
+    /* build char table */
+    node = huffman_top(hm_root);
+    base = node_table;
     traverse(node, 0);
+
+    free(node_table);
+    close(fd);
 }
 static long long int encode_count()
 {
@@ -152,6 +157,7 @@ void encode(const char *input, const char *output)
         exit(1);
     }
     if (pid > 0) {
+        /* read the file, encode it, then write to pipe */
         unsigned char buf[BUFFERSIZE >> 2];
         unsigned char tmp[BUFFERSIZE << 2];
         int nbytes = sizeof(buf);
@@ -165,11 +171,11 @@ void encode(const char *input, const char *output)
             write(fd[1], tmp, idx);
         }
     } else {
+        /* set char to bit */
         close(fd[1]);
-        unsigned char out[4096], bit, tmp[1024];
-        int idx = 0, k = 0;
-        int bytes_read;
-        while ((bytes_read = read(fd[0], out, 4096)) > 0) {
+        unsigned char out[BUFFERSIZE], bit, tmp[BUFFERSIZE >> 2];
+        int idx = 0, k = 0, bytes_read;
+        while ((bytes_read = read(fd[0], out, BUFFERSIZE)) > 0) {
             idx = count = 0;
             /* take ride the left chars */
             if (k != 0) {
@@ -180,22 +186,18 @@ void encode(const char *input, const char *output)
             bytes_read -= 8;
             while (idx < bytes_read) {
                 bit = 0;
-                /* set bit */
                 for (k = 0; k < 8; k++)
                     bit |= (out[idx++] == '1' ? (1 << (7 - k)) : 0);
                 tmp[count++] = bit;
             }
-            write(fop, (unsigned char *) &tmp[0], count); 
+            write(fop, (unsigned char *) tmp, count); 
             bit = 0;
             bytes_read += 8;
             for (k = 0; idx < bytes_read; k++)
                 bit |= (out[idx++] == '1' ? (1 << (7 - k)) : 0);
         }
-        if (idx % 8 != 0) {
-            tmp[count = 0] = bit;
-            write(fop, tmp, 1);
-        }
-
+        if ((idx & 7) != 0) 
+            write(fop, &bit, 1);
     }
     close(fip);
     close(fop);
