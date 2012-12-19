@@ -1,9 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
 #define BUFFERSIZE 4096
 #define NODESIZE 700
 typedef struct TrieNode {
@@ -45,7 +42,7 @@ int lookup(const int *word, node_t *root)
 /* read header and build the tree */
 void build_tree(node_t *root, FILE *fp)
 {    
-    unsigned char buf[BUFFERSIZE], c;
+    unsigned char buf[100], c;
     long long int n;
     fgets(buf, 100, fp);
     fscanf(fp, "%lld", &n);
