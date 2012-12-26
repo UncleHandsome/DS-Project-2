@@ -42,12 +42,12 @@ int lookup(const int *word, node_t *root)
     return -1;
 }
 /* read header and build the tree */
+long long int bit_count;
 void build_tree(node_t *root, FILE *fp)
 {    
     unsigned char buf[100], c;
-    long long int n;
     fgets(buf, 100, fp);
-    fscanf(fp, "%lld", &n);
+    fscanf(fp, "%lld", &bit_count);
     fgets(buf, 100, fp);
     fgets(buf, 100, fp);
     while(1) {
@@ -84,10 +84,11 @@ void decode(const char *filename, const char *output)
     prev = root;
     while ((bytes_read = fread(buf, 1, BUFFERSIZE >> 3, fp)) > 0) {
         for (idx = 0; idx < bytes_read; idx++)
-            for (bit = 0; bit < 8; bit++)
+            for (bit = 0; bit < 8; bit++) 
                 out[(idx << 3) | bit] = ((buf[idx] >> (7 - bit)) & 1);
         pos = 0;
-        limit = bytes_read << 3;
+        limit = (bytes_read << 3) + 0;
+        bit_count -= limit;
         if (prev != root) {
             fputc(lookup(out, prev), fo);
             prev = root;
@@ -95,8 +96,14 @@ void decode(const char *filename, const char *output)
         while ((c = lookup(out, root)) != -1) 
             fputc(c, fo);
     }
-    if (prev != root)
+    limit += bytes_read + 1;
+    if (prev != root) {
         fputc(lookup(out, prev), fo);
+        prev = root;
+    }
+    while ((c = lookup(out, root)) != -1) 
+            fputc(c, fo);
+
     free(trie_table);
     fclose(fp);
     fclose(fo);
