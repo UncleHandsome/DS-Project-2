@@ -6,7 +6,7 @@
 typedef struct TrieNode {
     struct TrieNode *child[2];
     int end;
-} node_t;
+} node_t __attribute__((aligned(sizeof(long))));
 node_t *trie_table, *prev;
 int trie_index, pos, limit;
 void trie_init()
@@ -19,9 +19,10 @@ void trie_init()
 }
 void add_string(const unsigned char *word, node_t *root, unsigned char end)
 {
-    unsigned char c;
+    register unsigned char c;
+    register int off;
     while ((c = *word++) && c != '\n') {
-        int off = c - '0';
+        off = c - '0';
         if (root->child[off] == NULL)
             root->child[off] = trie_table + trie_index++;
         root = root->child[off];
@@ -30,10 +31,11 @@ void add_string(const unsigned char *word, node_t *root, unsigned char end)
 }
 int lookup(const int *word, node_t *root)
 {
+    register int off;
     while (pos < limit) {
         if (root->end != -1)  
             return root->end;
-        int off = word[pos++];
+        off = word[pos++];
         root = root->child[off];
     }
     prev = root;
@@ -68,7 +70,7 @@ void decode(const char *filename, const char *output)
     FILE *fp, *fo;
     trie_init();
     node_t *root = trie_table + trie_index++;
-    int idx, bytes_read, bit, out[BUFFERSIZE], ori;
+    int idx, bytes_read, bit, out[BUFFERSIZE], c;
     unsigned char buf[BUFFERSIZE >> 3];
     if ((fp = fopen(filename, "r")) == NULL) {
         fprintf(stderr, "Cannot open %s. Try again later.\n", filename);
@@ -90,9 +92,11 @@ void decode(const char *filename, const char *output)
             fputc(lookup(out, prev), fo);
             prev = root;
         }
-        while ((ori = lookup(out, root)) != -1) 
-            fputc(ori, fo);
+        while ((c = lookup(out, root)) != -1) 
+            fputc(c, fo);
     }
+    if (prev != root)
+        fputc(lookup(out, prev), fo);
     free(trie_table);
     fclose(fp);
     fclose(fo);

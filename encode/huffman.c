@@ -11,7 +11,7 @@ static unsigned long long int record[260] = {};
 
 static void huffman_insert(struct hm_root *hm_root, struct hm_node *data)
 {
-    struct rb_node **link = &hm_root->rank.rb_node, *parent = NULL;
+    register struct rb_node **link = &hm_root->rank.rb_node, *parent = NULL;
     struct hm_node *node;
     int leftmost = 1;
     while (*link) {
@@ -159,8 +159,7 @@ void encode(const char *input, const char *output)
         /* read the file, encode it, then write to pipe */
         unsigned char buf[BUFFERSIZE >> 2];
         unsigned char tmp[BUFFERSIZE << 2];
-        int nbytes = sizeof(buf);
-        int bytes_read, idx = 0, j;
+        int nbytes = sizeof(buf), bytes_read, idx = 0, j;
         close(fd[0]);
         while ((bytes_read = read(fip, buf, nbytes)) > 0) {
             idx = 0;
@@ -195,9 +194,8 @@ void encode(const char *input, const char *output)
             for (k = 0; idx < bytes_read; k++)
                 bit |= (out[idx++] == '1' ? (1 << (7 - k)) : 0);
         }
-        if ((idx & 7) != 0) 
-            write(fop, &bit, 1);
+        write(fop, &bit, 1);
     }
-    close(fip);
-    close(fop);
+    //close(fip);
+    //close(fop);
 }

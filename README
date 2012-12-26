@@ -1,2 +1,4 @@
 2012, S1, NCTU DS Course Project 2
 Huffman Decoder & Encoder
+Usage:
+    ./{e,d}ncode input_filename output_filename
