@@ -98,8 +98,9 @@ void decode(const char *filename, const char *output)
     }
     limit += bytes_read + 1;
     if (prev != root) {
-        fputc(lookup(out, prev), fo);
-        prev = root;
+        c = lookup(out, prev);
+        if (c != -1)
+            fputc(lookup(out, prev), fo);
     }
     while ((c = lookup(out, root)) != -1) 
             fputc(c, fo);
