@@ -96,15 +96,8 @@ void decode(const char *filename, const char *output)
         while ((c = lookup(out, root)) != -1) 
             fputc(c, fo);
     }
-    limit += bytes_read + 1;
-    if (prev != root) {
-        c = lookup(out, prev);
-        if (c != -1)
-            fputc(lookup(out, prev), fo);
-    }
-    while ((c = lookup(out, root)) != -1) 
-            fputc(c, fo);
-
+    if (prev->end != -1)
+        fputc(prev->end, fo);
     free(trie_table);
     fclose(fp);
     fclose(fo);
