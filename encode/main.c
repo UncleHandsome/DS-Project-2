@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "rbtree.h"
 #include "huffman.h"
+#include <stdlib.h>
 int main(int argc, const char *argv[])
 {
     if (argc < 2) {

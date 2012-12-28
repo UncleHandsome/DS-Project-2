@@ -19,8 +19,8 @@ void trie_init()
 }
 void add_string(const unsigned char *word, node_t *root, unsigned char end)
 {
-    register unsigned char c;
-    register int off;
+    unsigned char c;
+    int off;
     while ((c = *word++) && c != '\n') {
         off = c - '0';
         if (root->child[off] == NULL)
@@ -31,7 +31,7 @@ void add_string(const unsigned char *word, node_t *root, unsigned char end)
 }
 int lookup(const int *word, node_t *root)
 {
-    register int off;
+    int off;
     while (pos < limit) {
         if (root->end != -1)  
             return root->end;
@@ -42,12 +42,12 @@ int lookup(const int *word, node_t *root)
     return -1;
 }
 /* read header and build the tree */
-long long int bit_count;
 void build_tree(node_t *root, FILE *fp)
 {    
     unsigned char buf[100], c;
+    long long int n;
     fgets(buf, 100, fp);
-    fscanf(fp, "%lld", &bit_count);
+    fscanf(fp, "%lld", &n);
     fgets(buf, 100, fp);
     fgets(buf, 100, fp);
     while(1) {
@@ -65,15 +65,15 @@ void build_tree(node_t *root, FILE *fp)
         add_string(buf + id, root, c);
     }
 }
-void decode(const char *filename, const char *output)
+void decode(const char *input, const char *output)
 {
     FILE *fp, *fo;
     trie_init();
     node_t *root = trie_table + trie_index++;
     int idx, bytes_read, bit, out[BUFFERSIZE], c;
     unsigned char buf[BUFFERSIZE >> 3];
-    if ((fp = fopen(filename, "r")) == NULL) {
-        fprintf(stderr, "Cannot open %s. Try again later.\n", filename);
+    if ((fp = fopen(input, "r")) == NULL) {
+        fprintf(stderr, "Cannot open %s. Try again later.\n", input);
         exit(1);
     }
     if ((fo = fopen(output, "w+")) == NULL) {
@@ -87,8 +87,7 @@ void decode(const char *filename, const char *output)
             for (bit = 0; bit < 8; bit++) 
                 out[(idx << 3) | bit] = ((buf[idx] >> (7 - bit)) & 1);
         pos = 0;
-        limit = (bytes_read << 3) + 0;
-        bit_count -= limit;
+        limit = (bytes_read << 3);
         if (prev != root) {
             fputc(lookup(out, prev), fo);
             prev = root;

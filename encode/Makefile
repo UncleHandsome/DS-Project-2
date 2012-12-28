@@ -1,13 +1,14 @@
 CC=gcc
-CFLAGS=-finline-functions -Wall -Wextra -O2
+CFLAGS= -Wall -Wextra -O2
+OBJS= huffman.o rbtree.o main.o
+HDRS= huffman.h rbtree.h
+TARGETS=encode
 
-.SUFFIXS: .c
-encode: main.o huffman.o rbtree.o
-		${CC} main.o huffman.o rbtree.o ${CFLAGS} -o $@
-%.o: %.c rbtree.h
-	${CC} $< ${CFLAGS} -c
-%.o: %.c huffman.h
-	${CC} $< ${CFLAGS} -c
+all: $(TARGETS)
+
+$(TARGETS): $(OBJS) $(HDRS)
+	$(CC) $(CFLAGS) $(OBJS) -o $@
+
 .PHONY: clean
 clean:
-	@rm -rf *.o output encode
+	@rm -rf $(OBJS) $(TARGETS) *~

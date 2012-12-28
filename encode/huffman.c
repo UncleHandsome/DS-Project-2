@@ -194,8 +194,9 @@ void encode(const char *input, const char *output)
             for (k = 0; idx < bytes_read; k++)
                 bit |= (out[idx++] == '1' ? (1 << (7 - k)) : 0);
         }
-        write(fop, (unsigned char *) &bit, 1);
+        if (k)
+            write(fop, (unsigned char *) &bit, 1);
     }
-    //close(fip);
-    //close(fop);
+    close(fip);
+    close(fop);
 }
