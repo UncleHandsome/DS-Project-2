@@ -1,10 +1,11 @@
 #include "rbtree.h"
 #include "huffman.h"
 #include <fcntl.h>
-#include <string.h>
+#include <linux/string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <omp.h>
 static unsigned char char_table[260][32], save[32];
 static int sz[260];
 static unsigned long long int record[260] = {};
@@ -38,19 +39,15 @@ static void huffman_pop(struct hm_root *hm_root)
     hm_root->left_most = next_node;
     rb_erase(&node->node, &hm_root->rank);
 }
-static inline struct hm_node *huffman_top(struct hm_root *hm_root)
-{
-    return rb_entry(hm_root->left_most, struct hm_node, node);
-}
 static struct hm_node *base;
 static void traverse(struct hm_node *node, int level)
 {
     if (node->left == NULL && node->right == NULL) {
-        int off = node - base, i;
-        sz[off] = level;
+        int offset = node - base, i;
+        sz[offset] = level;
         save[level++] = '\0';
         for (i = 0; i < level; i++)
-            char_table[off][i] = save[i];
+            char_table[offset][i] = save[i];
         return ;
     }
     if (node->left) {
@@ -65,7 +62,7 @@ static void traverse(struct hm_node *node, int level)
 extern void create_hm_tree(const char *input)
 {
     /* variable initialize */
-    unsigned char buf[BUFFERSIZE];
+    unsigned char buf[BUFFERSIZE << 1];
     int nbytes = sizeof(buf),  bytes_read, index = 0, fd, i;
     struct hm_root *hm_root = &HM_ROOT;
     struct hm_node *node_table, *node;
@@ -80,7 +77,9 @@ extern void create_hm_tree(const char *input)
 
     /* count the frequency */
     while ((bytes_read = read(fd, buf, nbytes)) > 0) 
+#pragma omp parallel for 
         for (i = 0; i < bytes_read; i++)
+#pragma omp atomic
             ++record[(int) buf[i]];
     
     /* tree initialize */
@@ -126,7 +125,7 @@ static long long int encode_count()
 }
 void encode(const char *input, const char *output)
 {
-    int fip, i, count, fop;
+    int fip, i, fop;
     /* open file */
     if ((fip = open(input, O_RDONLY)) == -1) {
         fprintf(stderr, "Cannot open %s. Try again later.\n", input);
@@ -174,22 +173,40 @@ void encode(const char *input, const char *output)
         unsigned char out[BUFFERSIZE], bit, tmp[BUFFERSIZE >> 2];
         int idx = 0, k = 0, bytes_read;
         while ((bytes_read = read(fd[0], out, BUFFERSIZE)) > 0) {
-            idx = count = 0;
+
+            idx = 0;
             /* take ride the left chars */
             if (k != 0) {
                 for (;k < 8; k++)
                     bit |= (out[idx++] == '1' ? (1 << (7 - k)) : 0);
-                tmp[count++] = bit;
+                write(fop, (unsigned char *) &bit, 1);
             }
             bytes_read -= 8;
+
+
+
+
             while (idx < bytes_read) {
                 bit = 0;
                 for (k = 0; k < 8; k++)
-                    bit |= (out[idx++] == '1' ? (1 << (7 - k)) : 0);
-                tmp[count++] = bit;
+                    bit |= (out[idx + k] == '1' ? (1 << (7 - k)) : 0);
+                idx += k;
+                tmp[((idx - 1) >> 3)] = bit;
             }
-            write(fop, (unsigned char *) tmp, count); 
+
+//            int id;
+//#pragma omp parallel for private(bit, k) num_threads(8)
+//            for (id = idx; id < bytes_read; id += 8) {
+//                bit = 0;
+//                for (k = 0; k < 8; k++)
+//                    bit |= (out[id + k] == '1' ? (1 << (7 - k)) : 0);
+//                tmp[((id - 1) >> 3)] = bit;
+//            }
+//            printf("%d\n", ((7 + bytes_read - ((bytes_read - 1) & 7)) >> 3)); 
+
+            write(fop, (unsigned char *) tmp, ((7 + bytes_read - ((bytes_read - 1) & 7)) >> 3)); 
             bit = 0;
+            idx = 7 + bytes_read - ((bytes_read - 1) & 7);
             bytes_read += 8;
             for (k = 0; idx < bytes_read; k++)
                 bit |= (out[idx++] == '1' ? (1 << (7 - k)) : 0);

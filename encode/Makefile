@@ -1,5 +1,5 @@
-CC=gcc
-CFLAGS= -Wall -Wextra -O2
+CC=cc
+CFLAGS= -Wall -Wextra -O2 -Wshadow -Werror -fopenmp
 OBJS= huffman.o rbtree.o main.o
 HDRS= huffman.h rbtree.h
 TARGETS=encode

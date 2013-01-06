@@ -23,6 +23,7 @@ static inline int hm_compare(struct hm_node *a, struct hm_node *b)
 #define HM_ROOT (struct hm_root) {RB_ROOT, NULL,}
 #define HM_EMPTY_ROOT(root) (RB_EMPTY_ROOT(root.rank))
 #define HM_EMPTY_NODE(node) (RB_EMPTY_NODE(node->node))
+#define huffman_top(root) rb_entry(root->left_most, struct hm_node, node)
 
 static inline void hm_init_node(struct hm_node *hm)
 {

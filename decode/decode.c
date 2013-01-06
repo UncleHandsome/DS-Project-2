@@ -14,8 +14,9 @@ void trie_init()
     trie_index = 0;
     trie_table = (node_t *)malloc(sizeof(node_t) * NODESIZE);
     int i;
+#pragma omp parallel for num_threads(4)
     for (i = 0; i < NODESIZE; i++)
-        (*(trie_table + i)).end = -1;
+        (trie_table + i)->end = -1;
 }
 void add_string(const unsigned char *word, node_t *root, unsigned char end)
 {
@@ -70,8 +71,8 @@ void decode(const char *input, const char *output)
     FILE *fp, *fo;
     trie_init();
     node_t *root = trie_table + trie_index++;
-    int idx, bytes_read, bit, out[BUFFERSIZE], c;
-    unsigned char buf[BUFFERSIZE >> 3];
+    int idx, bytes_read, bit, out[BUFFERSIZE << 2], c;
+    unsigned char buf[BUFFERSIZE >> 1];
     if ((fp = fopen(input, "r")) == NULL) {
         fprintf(stderr, "Cannot open %s. Try again later.\n", input);
         exit(1);
@@ -82,7 +83,8 @@ void decode(const char *input, const char *output)
     }
     build_tree(root, fp);
     prev = root;
-    while ((bytes_read = fread(buf, 1, BUFFERSIZE >> 3, fp)) > 0) {
+    while ((bytes_read = fread(buf, 1, BUFFERSIZE >> 1, fp)) > 0) {
+#pragma omp parellel for num_threads(8)
         for (idx = 0; idx < bytes_read; idx++)
             for (bit = 0; bit < 8; bit++) 
                 out[(idx << 3) | bit] = ((buf[idx] >> (7 - bit)) & 1);
